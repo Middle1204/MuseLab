@@ -5,13 +5,19 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using System.IO.Pipes;
+using System.Threading;
+using System.Diagnostics;
 
 namespace MuseLab
 {
     public class DiscordIpcReader
     {
-        public void Start()
+        private CancellationTokenSource? _cts;
+
+        public void Start(CancellationToken cancellationToken = default)
         {
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
             try
             {
                 using (var pipe = new NamedPipeClientStream(".", "discord-ipc-0", PipeDirection.InOut))
@@ -20,15 +26,15 @@ namespace MuseLab
 
                     Console.WriteLine("Connected to Discord IPC");
 
-                    while (true)
+                    while (!_cts.Token.IsCancellationRequested)
                     {
                         byte[] header = new byte[8];
-                        pipe.Read(header, 0, 8);
+                        ReadExactly(pipe, header, 0, 8);
 
                         int length = BitConverter.ToInt32(header, 4);
 
                         byte[] data = new byte[length];
-                        pipe.Read(data, 0, length);
+                        ReadExactly(pipe, data, 0, length);
 
                         string json = Encoding.UTF8.GetString(data);
 
@@ -57,15 +63,39 @@ namespace MuseLab
                                     }
                                 }
                             }
-                            catch { }
+                            catch (System.Text.Json.JsonException ex)
+                            {
+                                Debug.WriteLine($"JSON parse error: {ex.Message}");
+                            }
                         }
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                // 정상 종료
+            }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: " + ex.Message);
+                Debug.WriteLine($"Discord IPC Error: {ex.Message}");
             }
+        }
+
+        public void Stop()
+        {
+            _cts?.Cancel();
+        }
+
+        private static int ReadExactly(Stream stream, byte[] buffer, int offset, int count)
+        {
+            int totalRead = 0;
+            while (totalRead < count)
+            {
+                int read = stream.Read(buffer, offset + totalRead, count - totalRead);
+                if (read == 0) throw new EndOfStreamException();
+                totalRead += read;
+            }
+            return totalRead;
         }
     }
 }

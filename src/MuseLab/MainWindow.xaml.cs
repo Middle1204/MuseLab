@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,12 +19,12 @@ using System.Windows.Shapes;
 using System.Diagnostics;
 using System.Windows.Threading;
 
-struct RECT
+readonly struct RECT
 {
-    public int Left;
-    public int Top;
-    public int Right;
-    public int Bottom;
+    public readonly int Left;
+    public readonly int Top;
+    public readonly int Right;
+    public readonly int Bottom;
 }
 
 
@@ -37,46 +38,60 @@ namespace MuseLab
 
         DispatcherTimer timer;
 
+        Process? cachedProcess = null;
+        private DiscordIpcReader? _discordReader;
+        private CancellationTokenSource? _discordCts;
+
         void TrackGameWindow(object sender, EventArgs e)
         {
-            var processes = Process.GetProcessesByName("MuseDash");
+            try
+            {
+                if (cachedProcess == null || cachedProcess.HasExited)
+                {
+                    var processes = Process.GetProcessesByName("MuseDash");
+                    if (processes.Length == 0) return;
+
+                    cachedProcess?.Dispose();
+                    cachedProcess = processes[0];
+                }
+
+                IntPtr hwnd = cachedProcess.MainWindowHandle;
+                if (hwnd == IntPtr.Zero) return;
+
+                RECT rect;
+                int result = DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, out rect, Marshal.SizeOf(typeof(RECT)));
+                if (result != 0) return;
+
+                var source = PresentationSource.FromVisual(this);
+                if (source == null) return;
                 
-            if (processes.Length == 0)
-            {
-                return; // 게임 안 켜짐
+                double dpiX = source.CompositionTarget?.TransformFromDevice.M11 ?? 1.0;
+                double dpiY = source.CompositionTarget?.TransformFromDevice.M22 ?? 1.0;
+
+                this.Left = rect.Left * dpiX;
+                this.Top = rect.Top * dpiY;
+                this.Width = (rect.Right - rect.Left) * dpiX;
+                this.Height = (rect.Bottom - rect.Top) * dpiY;
             }
-
-            var process = processes[0];
-            IntPtr hwnd = process.MainWindowHandle;
-
-            if (hwnd == IntPtr.Zero)
-                return;
-
-            if (GetWindowRect(hwnd, out RECT rect))
+            catch (Exception ex)
             {
-                // 오버레이 위치 맞추기
-                this.Left = rect.Left;
-                this.Top = rect.Top;
-
-                this.Width = rect.Right - rect.Left;
-                this.Height = rect.Bottom - rect.Top;
+                // 로깅 또는 에러 처리
+                Debug.WriteLine($"TrackGameWindow error: {ex.Message}");
             }
         }
 
         public MainWindow()
         {
             InitializeComponent();
-
+            
             timer = new DispatcherTimer();
             timer.Interval = TimeSpan.FromMilliseconds(500);
             timer.Tick += TrackGameWindow;
             timer.Start();
 
-            Task.Run(() =>
-            {
-                var reader = new DiscordIpcReader();
-                reader.Start();
-            });
+            _discordCts = new CancellationTokenSource();
+            _discordReader = new DiscordIpcReader();
+            Task.Run(() => _discordReader.Start(_discordCts.Token), _discordCts.Token);
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -84,20 +99,58 @@ namespace MuseLab
             base.OnSourceInitialized(e);
 
             var hwnd = new WindowInteropHelper(this).Handle;
-            int exStyle = GetWindowLong(hwnd, -20);
+            var exStyle = GetWindowLongPtr(hwnd, GWL_EXSTYLE);
 
-            // WS_EX_TRANSPARENT (클릭 통과) + WS_EX_LAYERED
-            SetWindowLong(hwnd, -20, exStyle | 0x80000 | 0x20);
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, 
+                new IntPtr(exStyle.ToInt64() | WS_EX_TRANSPARENT | WS_EX_LAYERED));
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            base.OnClosing(e);
+            
+            timer?.Stop();
+            cachedProcess?.Dispose();
+            _discordCts?.Cancel();
+            _discordCts?.Dispose();
+        }
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
+        private static extern IntPtr GetWindowLongPtr32(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
+        private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
+        private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+        private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        private static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex)
+        {
+            return IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLongPtr32(hWnd, nIndex);
+        }
+
+        private static IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong)
+        {
+            return IntPtr.Size == 8 ? SetWindowLongPtr64(hWnd, nIndex, dwNewLong) : (IntPtr)SetWindowLong32(hWnd, nIndex, dwNewLong.ToInt32());
         }
 
         [DllImport("user32.dll")]
-        static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("user32.dll")]
-        static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll")]
         static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [DllImport("dwmapi.dll")]
+        static extern int DwmGetWindowAttribute(
+        IntPtr hwnd,
+        int dwAttribute,
+        out RECT pvAttribute,
+        int cbAttribute);
+
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_TRANSPARENT = 0x20;
+        private const int WS_EX_LAYERED = 0x80000;
+        private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
 
     }
