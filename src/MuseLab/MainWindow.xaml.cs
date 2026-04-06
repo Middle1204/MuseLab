@@ -40,7 +40,7 @@ namespace MuseLab
         void TrackGameWindow(object sender, EventArgs e)
         {
             var processes = Process.GetProcessesByName("MuseDash");
-
+                
             if (processes.Length == 0)
             {
                 return; // 게임 안 켜짐
@@ -71,6 +71,12 @@ namespace MuseLab
             timer.Interval = TimeSpan.FromMilliseconds(500);
             timer.Tick += TrackGameWindow;
             timer.Start();
+
+            Task.Run(() =>
+            {
+                var reader = new DiscordIpcReader();
+                reader.Start();
+            });
         }
 
         protected override void OnSourceInitialized(EventArgs e)
