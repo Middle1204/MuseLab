@@ -28,8 +28,6 @@ readonly struct RECT
 }
 
 
-
-
 namespace MuseLab
 {
 
@@ -41,6 +39,29 @@ namespace MuseLab
         Process? cachedProcess = null;
         private DiscordIpcReader? _discordReader;
         private CancellationTokenSource? _discordCts;
+
+        bool isSettingsOpen = false;
+        void ToggleSettings()
+        {
+            isSettingsOpen = !isSettingsOpen;
+
+            SettingsPanel.Visibility = isSettingsOpen
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            SetClickThrough(!isSettingsOpen);
+        }
+
+        void SetClickThrough(bool enable)
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            int exStyle = GetWindowLongPtr(hwnd, -20).ToInt32();
+
+            if (enable)
+                SetWindowLongPtr(hwnd, -20, new IntPtr(exStyle | 0x20)); // 클릭 통과
+            else
+                SetWindowLongPtr(hwnd, -20, new IntPtr(exStyle & ~0x20)); // 클릭 가능
+        }
 
         void TrackGameWindow(object sender, EventArgs e)
         {
@@ -113,6 +134,16 @@ namespace MuseLab
             cachedProcess?.Dispose();
             _discordCts?.Cancel();
             _discordCts?.Dispose();
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+
+            if (e.Key == Key.F1)
+            {
+                ToggleSettings();
+            }
         }
 
         [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
