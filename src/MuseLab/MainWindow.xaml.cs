@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -30,6 +31,12 @@ readonly struct RECT
 
 namespace MuseLab
 {
+    public class SongSearchResult
+    {
+        public string SongTitle { get; set; } = string.Empty;
+        public string Difficulty { get; set; } = string.Empty;
+        public string Level { get; set; } = string.Empty;
+    }
 
     public partial class MainWindow : Window
     {
@@ -144,6 +151,46 @@ namespace MuseLab
             {
                 ToggleSettings();
             }
+        }
+
+        private void SearchBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                PerformSearch();
+            }
+        }
+
+        private void SearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            PerformSearch();
+        }
+
+        private void PerformSearch()
+        {
+            string searchQuery = SearchBox?.Text?.Trim() ?? string.Empty;
+            
+            if (string.IsNullOrEmpty(searchQuery))
+            {
+                SearchResultsPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // 검색 기능 연동 필요 (api)
+            var results = new ObservableCollection<SongSearchResult>();
+            
+            SearchResultsList.ItemsSource = results;
+            
+            if (results.Count == 0)
+            {
+                NoResultsText.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                NoResultsText.Visibility = Visibility.Collapsed;
+            }
+            
+            SearchResultsPanel.Visibility = Visibility.Visible;
         }
 
         [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
