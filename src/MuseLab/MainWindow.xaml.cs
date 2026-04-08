@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.Windows.Threading;
 using System.Net.Http;
 using System.Text.Json;
+using System.Windows.Media.Animation;
 
 readonly struct RECT
 {
@@ -72,18 +73,30 @@ namespace MuseLab
         private DiscordIpcReader? _discordReader;
         private CancellationTokenSource? _discordCts;
 
+        private DispatcherTimer? _searchDebounceTimer;
+        private const int SearchDebounceMs = 300;
+
         bool isSettingsOpen = false;
         void ToggleSettings()
         {
             isSettingsOpen = !isSettingsOpen;
 
-            SettingsPanel.Visibility = isSettingsOpen
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-            if (!isSettingsOpen)
+            if (isSettingsOpen)
             {
-                SearchResultsPanel.Visibility = Visibility.Collapsed;
+                SettingsPanel.Visibility = Visibility.Visible;
+                var slideIn = (Storyboard)FindResource("SettingsSlideIn");
+                slideIn.Begin();
+            }
+            else
+            {
+                var slideOut = (Storyboard)FindResource("SettingsSlideOut");
+                slideOut.Completed += (s, e) =>
+                {
+                    SettingsPanel.Visibility = Visibility.Collapsed;
+                };
+                slideOut.Begin();
+
+                CloseSearchResultsPanel();
             }
 
             SetClickThrough(!isSettingsOpen);
@@ -141,11 +154,15 @@ namespace MuseLab
         public MainWindow()
         {
             InitializeComponent();
-            
+
             timer = new DispatcherTimer();
             timer.Interval = TimeSpan.FromMilliseconds(500);
             timer.Tick += TrackGameWindow;
             timer.Start();
+
+            _searchDebounceTimer = new DispatcherTimer();
+            _searchDebounceTimer.Interval = TimeSpan.FromMilliseconds(SearchDebounceMs);
+            _searchDebounceTimer.Tick += SearchDebounceTimer_Tick;
 
             _discordCts = new CancellationTokenSource();
             _discordReader = new DiscordIpcReader();
@@ -166,8 +183,9 @@ namespace MuseLab
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             base.OnClosing(e);
-            
+
             timer?.Stop();
+            _searchDebounceTimer?.Stop();
             cachedProcess?.Dispose();
             _discordCts?.Cancel();
             _discordCts?.Dispose();
@@ -181,6 +199,36 @@ namespace MuseLab
             {
                 ToggleSettings();
             }
+        }
+
+        private void SearchBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (SearchResultsPanel.Visibility != Visibility.Visible)
+            {
+                SearchResultsPanel.Visibility = Visibility.Visible;
+                var slideIn = (Storyboard)FindResource("SearchSlideIn");
+                slideIn.Begin();
+
+                string searchQuery = SearchBox?.Text?.Trim() ?? string.Empty;
+                if (string.IsNullOrEmpty(searchQuery))
+                {
+                    SearchPromptText.Visibility = Visibility.Visible;
+                    NoResultsText.Visibility = Visibility.Collapsed;
+                    SearchResultsList.ItemsSource = null;
+                }
+            }
+        }
+
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _searchDebounceTimer?.Stop();
+            _searchDebounceTimer?.Start();
+        }
+
+        private void SearchDebounceTimer_Tick(object? sender, EventArgs e)
+        {
+            _searchDebounceTimer?.Stop();
+            _ = PerformSearchAsync();
         }
 
         private void SearchBox_KeyDown(object sender, KeyEventArgs e)
@@ -198,7 +246,17 @@ namespace MuseLab
 
         private void CloseSearchButton_Click(object sender, RoutedEventArgs e)
         {
-            SearchResultsPanel.Visibility = Visibility.Collapsed;
+            CloseSearchResultsPanel();
+        }
+
+        private void CloseSearchResultsPanel()
+        {
+            var slideOut = (Storyboard)FindResource("SearchSlideOut");
+            slideOut.Completed += (s, e) =>
+            {
+                SearchResultsPanel.Visibility = Visibility.Collapsed;
+            };
+            slideOut.Begin();
         }
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
@@ -212,9 +270,16 @@ namespace MuseLab
 
             if (string.IsNullOrEmpty(searchQuery))
             {
-                SearchResultsPanel.Visibility = Visibility.Collapsed;
+                if (SearchResultsPanel.Visibility == Visibility.Visible)
+                {
+                    SearchPromptText.Visibility = Visibility.Visible;
+                    NoResultsText.Visibility = Visibility.Collapsed;
+                    SearchResultsList.ItemsSource = null;
+                }
                 return;
             }
+
+            SearchPromptText.Visibility = Visibility.Collapsed;
 
             try
             {
@@ -255,13 +320,24 @@ namespace MuseLab
                         NoResultsText.Visibility = Visibility.Collapsed;
                     }
 
-                    SearchResultsPanel.Visibility = Visibility.Visible;
+                    if (SearchResultsPanel.Visibility != Visibility.Visible)
+                    {
+                        SearchResultsPanel.Visibility = Visibility.Visible;
+                        var slideIn = (Storyboard)FindResource("SearchSlideIn");
+                        slideIn.Begin();
+                    }
                 }
                 else
                 {
                     NoResultsText.Visibility = Visibility.Visible;
                     SearchResultsList.ItemsSource = new ObservableCollection<SongSearchResult>();
-                    SearchResultsPanel.Visibility = Visibility.Visible;
+
+                    if (SearchResultsPanel.Visibility != Visibility.Visible)
+                    {
+                        SearchResultsPanel.Visibility = Visibility.Visible;
+                        var slideIn = (Storyboard)FindResource("SearchSlideIn");
+                        slideIn.Begin();
+                    }
                 }
             }
             catch (Exception ex)
@@ -269,7 +345,13 @@ namespace MuseLab
                 Debug.WriteLine($"Search error: {ex.Message}");
                 NoResultsText.Visibility = Visibility.Visible;
                 SearchResultsList.ItemsSource = new ObservableCollection<SongSearchResult>();
-                SearchResultsPanel.Visibility = Visibility.Visible;
+
+                if (SearchResultsPanel.Visibility != Visibility.Visible)
+                {
+                    SearchResultsPanel.Visibility = Visibility.Visible;
+                    var slideIn = (Storyboard)FindResource("SearchSlideIn");
+                    slideIn.Begin();
+                }
             }
         }
 

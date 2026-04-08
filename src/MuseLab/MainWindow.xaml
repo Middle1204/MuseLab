@@ -8,6 +8,80 @@
         Topmost="True"
         ShowInTaskbar="False">
 
+    <Window.Resources>
+        <!-- 설정 패널 슬라이드 인 애니메이션 -->
+        <Storyboard x:Key="SettingsSlideIn">
+            <DoubleAnimation Storyboard.TargetName="SettingsPanelTransform"
+                           Storyboard.TargetProperty="X"
+                           From="-370"
+                           To="0"
+                           Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="SettingsPanel"
+                           Storyboard.TargetProperty="Opacity"
+                           From="0"
+                           To="1"
+                           Duration="0:0:0.3"/>
+        </Storyboard>
+
+        <!-- 설정 패널 슬라이드 아웃 애니메이션 -->
+        <Storyboard x:Key="SettingsSlideOut">
+            <DoubleAnimation Storyboard.TargetName="SettingsPanelTransform"
+                           Storyboard.TargetProperty="X"
+                           From="0"
+                           To="-370"
+                           Duration="0:0:0.25">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="SettingsPanel"
+                           Storyboard.TargetProperty="Opacity"
+                           From="1"
+                           To="0"
+                           Duration="0:0:0.25"/>
+        </Storyboard>
+
+        <!-- 검색 결과 패널 슬라이드 인 애니메이션 -->
+        <Storyboard x:Key="SearchSlideIn">
+            <DoubleAnimation Storyboard.TargetName="SearchResultsTransform"
+                           Storyboard.TargetProperty="X"
+                           From="-370"
+                           To="0"
+                           Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="SearchResultsPanel"
+                           Storyboard.TargetProperty="Opacity"
+                           From="0"
+                           To="1"
+                           Duration="0:0:0.3"/>
+        </Storyboard>
+
+        <!-- 검색 결과 패널 슬라이드 아웃 애니메이션 -->
+        <Storyboard x:Key="SearchSlideOut">
+            <DoubleAnimation Storyboard.TargetName="SearchResultsTransform"
+                           Storyboard.TargetProperty="X"
+                           From="0"
+                           To="-370"
+                           Duration="0:0:0.25">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="SearchResultsPanel"
+                           Storyboard.TargetProperty="Opacity"
+                           From="1"
+                           To="0"
+                           Duration="0:0:0.25"/>
+        </Storyboard>
+    </Window.Resources>
+
     <Grid>
     <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*"/>
@@ -23,7 +97,12 @@
                 Padding="12"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Stretch"
-                Visibility="Collapsed">
+                Visibility="Collapsed"
+                Opacity="0"
+                RenderTransformOrigin="0,0">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="SearchResultsTransform" X="-370"/>
+            </Border.RenderTransform>
 
             <Grid>
                 <Grid.RowDefinitions>
@@ -143,6 +222,15 @@
                               HorizontalAlignment="Center"
                               VerticalAlignment="Center"
                               Visibility="Collapsed"/>
+
+                    <!-- 검색 대기 텍스트 -->
+                    <TextBlock x:Name="SearchPromptText"
+                              Text="Type to search for songs..."
+                              FontSize="14"
+                              Foreground="#FF888888"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Visibility="Collapsed"/>
                 </Grid>
             </Grid>
         </Border>
@@ -157,7 +245,12 @@
                 Padding="12"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Stretch"
-                Visibility="Collapsed">
+                Visibility="Collapsed"
+                Opacity="0"
+                RenderTransformOrigin="0,0">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="SettingsPanelTransform" X="-370"/>
+            </Border.RenderTransform>
 
             <Grid>
                 <Grid.RowDefinitions>
@@ -224,6 +317,8 @@
                                 FontSize="13"
                                 VerticalContentAlignment="Center"
                                 Height="32"
+                                GotFocus="SearchBox_GotFocus"
+                                TextChanged="SearchBox_TextChanged"
                                 KeyDown="SearchBox_KeyDown"/>
 
                         <Button x:Name="SearchButton"
