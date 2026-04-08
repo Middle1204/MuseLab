@@ -19,6 +19,8 @@ using System.Windows.Shapes;
 
 using System.Diagnostics;
 using System.Windows.Threading;
+using System.Net.Http;
+using System.Text.Json;
 
 readonly struct RECT
 {
@@ -31,17 +33,40 @@ readonly struct RECT
 
 namespace MuseLab
 {
+    public class SongApiResponse
+    {
+        public string? query { get; set; }
+        public List<BestMatch>? bestMatch { get; set; }
+        public List<BestMatch>? top5 { get; set; }
+    }
+
+    public class BestMatch
+    {
+        public string? title { get; set; }
+        public string? course { get; set; }
+        public double level { get; set; }
+        public string? composer { get; set; }
+        public int notes { get; set; }
+        public string? bpm { get; set; }
+        public string? _searchTitle { get; set; }
+        public double score { get; set; }
+    }
+
     public class SongSearchResult
     {
-        public string SongTitle { get; set; } = string.Empty;
-        public string Difficulty { get; set; } = string.Empty;
-        public string Level { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Course { get; set; } = string.Empty;
+        public double Level { get; set; }
+        public string Composer { get; set; } = string.Empty;
+        public int Notes { get; set; }
+        public string Bpm { get; set; } = string.Empty;
     }
 
     public partial class MainWindow : Window
     {
 
         DispatcherTimer timer;
+        private static readonly HttpClient httpClient = new HttpClient();
 
         Process? cachedProcess = null;
         private DiscordIpcReader? _discordReader;
@@ -162,13 +187,13 @@ namespace MuseLab
         {
             if (e.Key == Key.Enter)
             {
-                PerformSearch();
+                _ = PerformSearchAsync();
             }
         }
 
         private void SearchButton_Click(object sender, RoutedEventArgs e)
         {
-            PerformSearch();
+            _ = PerformSearchAsync();
         }
 
         private void CloseSearchButton_Click(object sender, RoutedEventArgs e)
@@ -181,31 +206,71 @@ namespace MuseLab
             Application.Current.Shutdown();
         }
 
-        private void PerformSearch()
+        private async Task PerformSearchAsync()
         {
             string searchQuery = SearchBox?.Text?.Trim() ?? string.Empty;
-            
+
             if (string.IsNullOrEmpty(searchQuery))
             {
                 SearchResultsPanel.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            // 검색 기능 연동 필요 (api)
-            var results = new ObservableCollection<SongSearchResult>();
-            
-            SearchResultsList.ItemsSource = results;
-            
-            if (results.Count == 0)
+            try
             {
+                string apiUrl = $"http://localhost:3000/songs/{Uri.EscapeDataString(searchQuery)}";
+                var response = await httpClient.GetAsync(apiUrl);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var apiResponse = System.Text.Json.JsonSerializer.Deserialize<SongApiResponse>(json);
+
+                    var results = new ObservableCollection<SongSearchResult>();
+
+                    if (apiResponse?.bestMatch != null && apiResponse.bestMatch.Count > 0)
+                    {
+                        foreach (var match in apiResponse.bestMatch)
+                        {
+                            results.Add(new SongSearchResult
+                            {
+                                Title = match.title ?? "Unknown",
+                                Course = match.course ?? "Unknown",
+                                Level = match.level,
+                                Composer = match.composer ?? "Unknown",
+                                Notes = match.notes,
+                                Bpm = match.bpm ?? "Unknown"
+                            });
+                        }
+                    }
+
+                    SearchResultsList.ItemsSource = results;
+
+                    if (results.Count == 0)
+                    {
+                        NoResultsText.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        NoResultsText.Visibility = Visibility.Collapsed;
+                    }
+
+                    SearchResultsPanel.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    NoResultsText.Visibility = Visibility.Visible;
+                    SearchResultsList.ItemsSource = new ObservableCollection<SongSearchResult>();
+                    SearchResultsPanel.Visibility = Visibility.Visible;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Search error: {ex.Message}");
                 NoResultsText.Visibility = Visibility.Visible;
+                SearchResultsList.ItemsSource = new ObservableCollection<SongSearchResult>();
+                SearchResultsPanel.Visibility = Visibility.Visible;
             }
-            else
-            {
-                NoResultsText.Visibility = Visibility.Collapsed;
-            }
-            
-            SearchResultsPanel.Visibility = Visibility.Visible;
         }
 
         [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
