@@ -56,6 +56,11 @@ namespace MuseLab
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
+            if (!isSettingsOpen)
+            {
+                SearchResultsPanel.Visibility = Visibility.Collapsed;
+            }
+
             SetClickThrough(!isSettingsOpen);
         }
 
@@ -164,6 +169,16 @@ namespace MuseLab
         private void SearchButton_Click(object sender, RoutedEventArgs e)
         {
             PerformSearch();
+        }
+
+        private void CloseSearchButton_Click(object sender, RoutedEventArgs e)
+        {
+            SearchResultsPanel.Visibility = Visibility.Collapsed;
+        }
+
+        private void ExitButton_Click(object sender, RoutedEventArgs e)
+        {
+            Application.Current.Shutdown();
         }
 
         private void PerformSearch()

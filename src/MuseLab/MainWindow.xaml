@@ -31,10 +31,25 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="Search Results"
-                           FontSize="16"
-                           Foreground="White"
-                           Margin="0,0,0,10"/>
+                <Grid Margin="0,0,0,10">
+                    <TextBlock Text="Search Results"
+                               FontSize="16"
+                               Foreground="White"
+                               HorizontalAlignment="Left"/>
+
+                    <Button x:Name="CloseSearchButton"
+                            Content="×"
+                            Background="Transparent"
+                            Foreground="White"
+                            BorderThickness="0"
+                            FontSize="20"
+                            Width="24"
+                            Height="24"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Top"
+                            Cursor="Hand"
+                            Click="CloseSearchButton_Click"/>
+                </Grid>
 
                 <Grid Grid.Row="1">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -125,6 +140,22 @@
                               Foreground="White"
                               IsChecked="True"/>
                 </StackPanel>
+
+                <!-- 프로그램 종료 -->
+                <Button x:Name="ExitButton"
+                        Grid.Row="2"
+                        Content="프로그램 종료"
+                        Background="#FFDC3545"
+                        Foreground="White"
+                        BorderThickness="0"
+                        Padding="0"
+                        Margin="0,15,0,0"
+                        Height="36"
+                        FontSize="13"
+                        FontWeight="SemiBold"
+                        Cursor="Hand"
+                        VerticalAlignment="Bottom"
+                        Click="ExitButton_Click"/>
 
                 <!-- 검색 섹션 -->
                 <StackPanel Grid.Row="3" Margin="0,10,0,0">
