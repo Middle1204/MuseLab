@@ -77,6 +77,10 @@ namespace MuseLab
         private const int SearchDebounceMs = 300;
 
         bool isSettingsOpen = false;
+        bool isEditMode = false;
+        private Point? _dragStartPoint = null;
+        private Thickness _originalMargin;
+        private bool isSongInfoEnabled = true;
         void ToggleSettings()
         {
             isSettingsOpen = !isSettingsOpen;
@@ -97,6 +101,7 @@ namespace MuseLab
                 slideOut.Begin();
 
                 CloseSearchResultsPanel();
+                DisableEditMode();
             }
 
             SetClickThrough(!isSettingsOpen);
@@ -262,6 +267,164 @@ namespace MuseLab
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
             Application.Current.Shutdown();
+        }
+
+        private void ToggleEditModeButton_Click(object sender, RoutedEventArgs e)
+        {
+            isEditMode = !isEditMode;
+
+            if (isEditMode)
+            {
+                ToggleEditModeButton.Content = "편집 완료";
+                ToggleEditModeButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF28A745"));
+                SongInfoBorder.BorderBrush = new SolidColorBrush(Colors.Yellow);
+                SongInfoBorder.BorderThickness = new Thickness(2);
+                SongInfoBorder.Cursor = Cursors.Hand;
+            }
+            else
+            {
+                ToggleEditModeButton.Content = "오버레이 편집";
+                ToggleEditModeButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF6C757D"));
+
+                if (ShowBorderCheck?.IsChecked == true)
+                {
+                    SongInfoBorder.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF2D9CDB"));
+                    SongInfoBorder.BorderThickness = new Thickness(2);
+                }
+                else
+                {
+                    SongInfoBorder.BorderBrush = null;
+                    SongInfoBorder.BorderThickness = new Thickness(0);
+                }
+
+                SongInfoBorder.Cursor = Cursors.Arrow;
+            }
+        }
+
+        private void DisableEditMode()
+        {
+            if (isEditMode)
+            {
+                isEditMode = false;
+                ToggleEditModeButton.Content = "오버레이 편집";
+                ToggleEditModeButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF6C757D"));
+
+                if (ShowBorderCheck?.IsChecked == true)
+                {
+                    SongInfoBorder.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF2D9CDB"));
+                    SongInfoBorder.BorderThickness = new Thickness(2);
+                }
+                else
+                {
+                    SongInfoBorder.BorderBrush = null;
+                    SongInfoBorder.BorderThickness = new Thickness(0);
+                }
+
+                SongInfoBorder.Cursor = Cursors.Arrow;
+            }
+        }
+
+        private void SongInfoToggle_Click(object sender, RoutedEventArgs e)
+        {
+            isSongInfoEnabled = !isSongInfoEnabled;
+            UpdateSongInfoStatus();
+        }
+
+        private void SongInfoToggle_RightClick(object sender, MouseButtonEventArgs e)
+        {
+            if (SongInfoDetailPanel.Visibility == Visibility.Visible)
+            {
+                SongInfoDetailPanel.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                SongInfoDetailPanel.Visibility = Visibility.Visible;
+            }
+            e.Handled = true;
+        }
+
+        private void UpdateSongInfoStatus()
+        {
+            if (isSongInfoEnabled)
+            {
+                SongInfoBorder.Visibility = Visibility.Visible;
+                SongInfoToggleText.FontWeight = FontWeights.Bold;
+            }
+            else
+            {
+                SongInfoBorder.Visibility = Visibility.Collapsed;
+                SongInfoToggleText.FontWeight = FontWeights.Normal;
+            }
+        }
+
+        private void ShowBorderCheck_Changed(object sender, RoutedEventArgs e)
+        {
+            if (ShowBorderCheck.IsChecked == true)
+            {
+                SongInfoBorder.BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF2D9CDB"));
+                SongInfoBorder.BorderThickness = new Thickness(2);
+            }
+            else
+            {
+                if (!isEditMode)
+                {
+                    SongInfoBorder.BorderBrush = null;
+                    SongInfoBorder.BorderThickness = new Thickness(0);
+                }
+            }
+        }
+
+        private void ShowDifficultyCheck_Changed(object sender, RoutedEventArgs e)
+        {
+            if (DifficultyBorder != null)
+            {
+                DifficultyBorder.Visibility = ShowDifficultyCheck.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        private void ShowLevelCheck_Changed(object sender, RoutedEventArgs e)
+        {
+            if (LevelText != null)
+            {
+                LevelText.Visibility = ShowLevelCheck.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        private void SongInfoBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (!isEditMode) return;
+
+            _dragStartPoint = e.GetPosition(this);
+            _originalMargin = SongInfoBorder.Margin;
+            SongInfoBorder.CaptureMouse();
+            e.Handled = true;
+        }
+
+        private void SongInfoBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (!isEditMode) return;
+
+            _dragStartPoint = null;
+            SongInfoBorder.ReleaseMouseCapture();
+            e.Handled = true;
+        }
+
+        private void SongInfoBorder_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!isEditMode || _dragStartPoint == null || !SongInfoBorder.IsMouseCaptured) return;
+
+            Point currentPosition = e.GetPosition(this);
+            double deltaX = currentPosition.X - _dragStartPoint.Value.X;
+            double deltaY = currentPosition.Y - _dragStartPoint.Value.Y;
+
+            double newRight = _originalMargin.Right - deltaX;
+            double newBottom = _originalMargin.Bottom - deltaY;
+
+            newRight = Math.Max(10, Math.Min(newRight, this.ActualWidth - SongInfoBorder.ActualWidth - 10));
+            newBottom = Math.Max(10, Math.Min(newBottom, this.ActualHeight - SongInfoBorder.ActualHeight - 10));
+
+            SongInfoBorder.Margin = new Thickness(0, 0, newRight, newBottom);
+            e.Handled = true;
         }
 
         private async Task PerformSearchAsync()

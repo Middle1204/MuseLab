@@ -82,6 +82,7 @@
         </Storyboard>
     </Window.Resources>
 
+
     <Grid>
     <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*"/>
@@ -266,18 +267,78 @@
                            Foreground="White"
                            Margin="0,0,0,10"/>
 
-                <!-- 예시 설정 -->
-                <StackPanel Grid.Row="1">
-                    <CheckBox x:Name="ToggleLevel"
-                              Content="Show Level"
-                              Foreground="White"
-                              IsChecked="True"/>
+                <!-- 설정 목록 -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- 곡 정보 표시 설정 -->
+                        <Border Background="#FF3A3A3A"
+                                CornerRadius="6"
+                                Margin="0,0,0,8">
+                            <StackPanel>
+                                <Button x:Name="SongInfoToggle"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Padding="10,8"
+                                        Cursor="Hand"
+                                        HorizontalContentAlignment="Left"
+                                        Click="SongInfoToggle_Click"
+                                        MouseRightButtonDown="SongInfoToggle_RightClick">
+                                    <TextBlock x:Name="SongInfoToggleText"
+                                              Text="곡 정보 표시"
+                                              FontSize="13"
+                                              Foreground="White"
+                                              FontWeight="Bold"/>
+                                </Button>
 
-                    <CheckBox x:Name="ToggleDifficulty"
-                              Content="Show Difficulty"
-                              Foreground="White"
-                              IsChecked="True"/>
-                </StackPanel>
+                                <!-- 상세 설정 패널 -->
+                                <Border x:Name="SongInfoDetailPanel"
+                                       Visibility="Collapsed"
+                                       Background="#FF2A2A2A"
+                                       Padding="10,5,10,10">
+                                    <StackPanel>
+                                        <CheckBox x:Name="ShowDifficultyCheck"
+                                                 Content="난이도 표시"
+                                                 Foreground="White"
+                                                 FontSize="12"
+                                                 IsChecked="True"
+                                                 Margin="0,5,0,5"
+                                                 Checked="ShowDifficultyCheck_Changed"
+                                                 Unchecked="ShowDifficultyCheck_Changed"/>
+                                        <CheckBox x:Name="ShowLevelCheck"
+                                                 Content="레벨 표시"
+                                                 Foreground="White"
+                                                 FontSize="12"
+                                                 IsChecked="True"
+                                                 Margin="0,0,0,5"
+                                                 Checked="ShowLevelCheck_Changed"
+                                                 Unchecked="ShowLevelCheck_Changed"/>
+                                        <CheckBox x:Name="ShowBorderCheck"
+                                                 Content="외곽선 추가"
+                                                 Foreground="White"
+                                                 FontSize="12"
+                                                 IsChecked="False"
+                                                 Margin="0,0,0,5"
+                                                 Checked="ShowBorderCheck_Changed"
+                                                 Unchecked="ShowBorderCheck_Changed"/>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- 오버레이 편집 버튼 -->
+                        <Button x:Name="ToggleEditModeButton"
+                                Content="오버레이 편집"
+                                Background="#FF6C757D"
+                                Foreground="White"
+                                BorderThickness="0"
+                                Padding="10,6"
+                                Margin="0,7,0,0"
+                                Height="32"
+                                FontSize="13"
+                                Cursor="Hand"
+                                Click="ToggleEditModeButton_Click"/>
+                    </StackPanel>
+                </ScrollViewer>
 
                 <!-- 프로그램 종료 -->
                 <Button x:Name="ExitButton"
@@ -338,7 +399,8 @@
         </Border>
 
         <!-- 곡 정보 표시 -->
-        <Border Grid.Column="2"
+        <Border x:Name="SongInfoBorder"
+                Grid.Column="2"
                 Width="320"
                 Height="110"
                 CornerRadius="16"
@@ -346,7 +408,10 @@
                 Padding="14"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
-                Margin="0,0,20,20">
+                Margin="0,0,20,20"
+                MouseLeftButtonDown="SongInfoBorder_MouseLeftButtonDown"
+                MouseLeftButtonUp="SongInfoBorder_MouseLeftButtonUp"
+                MouseMove="SongInfoBorder_MouseMove">
 
             <Grid>
                 <Grid.RowDefinitions>
@@ -371,7 +436,8 @@
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
 
                         <!-- 난이도 -->
-                        <Border Background="#FF2D9CDB"
+                        <Border x:Name="DifficultyBorder"
+                                Background="#FF2D9CDB"
                                 CornerRadius="6"
                                 Padding="6,2"
                                 Margin="0,0,6,0">
