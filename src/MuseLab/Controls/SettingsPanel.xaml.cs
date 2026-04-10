@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 
 namespace MuseLab.Controls
 {
@@ -21,6 +22,8 @@ namespace MuseLab.Controls
         public event EventHandler<string>? CourseFilterChanged;
 
         private string _selectedCourse = "";
+        private bool _isFilterOpen = false;
+        private double _filterContentHeight = 0;
 
         public string SearchText => SearchBox?.Text?.Trim() ?? string.Empty;
         public string LevelMin => LevelMinBox?.Text?.Trim() ?? string.Empty;
@@ -33,6 +36,42 @@ namespace MuseLab.Controls
         public SettingsPanel()
         {
             InitializeComponent();
+            Loaded += (s, e) => MeasureFilterContent();
+        }
+
+        private void MeasureFilterContent()
+        {
+            FilterContent.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            _filterContentHeight = FilterContent.DesiredSize.Height;
+        }
+
+        private void FilterToggleButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_filterContentHeight == 0)
+                MeasureFilterContent();
+
+            _isFilterOpen = !_isFilterOpen;
+
+            FilterToggleArrow.Text = _isFilterOpen ? "▼" : "▲";
+
+            var heightAnim = new DoubleAnimation
+            {
+                From = _isFilterOpen ? 0 : _filterContentHeight,
+                To = _isFilterOpen ? _filterContentHeight : 0,
+                Duration = TimeSpan.FromMilliseconds(200),
+                EasingFunction = new CubicEase { EasingMode = _isFilterOpen ? EasingMode.EaseOut : EasingMode.EaseIn }
+            };
+
+            var translateAnim = new DoubleAnimation
+            {
+                From = _isFilterOpen ? _filterContentHeight : 0,
+                To = _isFilterOpen ? 0 : _filterContentHeight,
+                Duration = TimeSpan.FromMilliseconds(200),
+                EasingFunction = new CubicEase { EasingMode = _isFilterOpen ? EasingMode.EaseOut : EasingMode.EaseIn }
+            };
+
+            FilterPanel.BeginAnimation(HeightProperty, heightAnim);
+            FilterTranslate.BeginAnimation(TranslateTransform.YProperty, translateAnim);
         }
 
         public void SetEditModeActive(bool active)
