@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -37,11 +38,18 @@ namespace MuseLab
     public class SongApiResponse
     {
         public string? query { get; set; }
-        public List<BestMatch>? bestMatch { get; set; }
-        public List<BestMatch>? top5 { get; set; }
+        public FilterInfo? filters { get; set; }
+        public List<SongResult>? results { get; set; }
     }
 
-    public class BestMatch
+    public class FilterInfo
+    {
+        public string? course { get; set; }
+        public double? levelMin { get; set; }
+        public double? levelMax { get; set; }
+    }
+
+    public class SongResult
     {
         public string? title { get; set; }
         public string? course { get; set; }
@@ -53,7 +61,7 @@ namespace MuseLab
         public double score { get; set; }
     }
 
-    public class SongSearchResult
+    public class SongSearchResult : INotifyPropertyChanged
     {
         public string Title { get; set; } = string.Empty;
         public string Course { get; set; } = string.Empty;
@@ -61,6 +69,22 @@ namespace MuseLab
         public string Composer { get; set; } = string.Empty;
         public int Notes { get; set; }
         public string Bpm { get; set; } = string.Empty;
+
+        private bool _isHighlighted;
+        public bool IsHighlighted
+        {
+            get => _isHighlighted;
+            set
+            {
+                if (_isHighlighted != value)
+                {
+                    _isHighlighted = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsHighlighted)));
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
     }
 
     public partial class MainWindow : Window
@@ -81,6 +105,7 @@ namespace MuseLab
         private Point? _dragStartPoint = null;
         private Thickness _originalMargin;
         private bool isSongInfoEnabled = true;
+        private Dictionary<TextBlock, DispatcherTimer> _tooltipTimers = new Dictionary<TextBlock, DispatcherTimer>();
         void ToggleSettings()
         {
             isSettingsOpen = !isSettingsOpen;
@@ -390,6 +415,199 @@ namespace MuseLab
             }
         }
 
+        private void LevelBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
+            foreach (char c in e.Text)
+            {
+                if (!char.IsDigit(c) && c != '.')
+                {
+                    e.Handled = true;
+                    return;
+                }
+            }
+        }
+
+        private string _selectedCourse = "";
+        private void CourseButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button clickedButton)
+            {
+                CourseAllButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3A3A3A"));
+                CourseMasterButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3A3A3A"));
+                CourseHiddenButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3A3A3A"));
+
+                clickedButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF2D9CDB"));
+
+                if (clickedButton == CourseAllButton)
+                    _selectedCourse = "";
+                else if (clickedButton == CourseMasterButton)
+                    _selectedCourse = "master";
+                else if (clickedButton == CourseHiddenButton)
+                    _selectedCourse = "hidden";
+            }
+        }
+
+        private void RandomPickButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SearchResultsList.ItemsSource is ObservableCollection<SongSearchResult> results && results.Count > 0)
+            {
+                foreach (var result in results)
+                {
+                    result.IsHighlighted = false;
+                }
+
+                var random = new Random();
+                int randomIndex = random.Next(results.Count);
+                var selectedSong = results[randomIndex];
+                selectedSong.IsHighlighted = true;
+
+                Dispatcher.InvokeAsync(() =>
+                {
+                    SearchResultsList.UpdateLayout();
+
+                    var container = SearchResultsList.ItemContainerGenerator.ContainerFromIndex(randomIndex) as FrameworkElement;
+
+                    if (container != null)
+                    {
+                        var transform = container.TransformToAncestor(SearchResultsScrollViewer);
+                        var position = transform.Transform(new Point(0, 0));
+
+                        double viewportHeight = SearchResultsScrollViewer.ViewportHeight;
+                        double containerHeight = container.ActualHeight;
+                        double currentOffset = SearchResultsScrollViewer.VerticalOffset;
+
+                        double targetOffset = currentOffset + position.Y - (viewportHeight / 2) + (containerHeight / 2);
+
+                        targetOffset = Math.Max(0, Math.Min(targetOffset, SearchResultsScrollViewer.ScrollableHeight));
+
+                        AnimateScroll(SearchResultsScrollViewer.VerticalOffset, targetOffset);
+                    }
+                    else
+                    {
+                        double totalHeight = 0;
+                        double avgHeight = 0;
+                        int measuredItems = Math.Min(5, SearchResultsList.Items.Count);
+
+                        for (int i = 0; i < measuredItems; i++)
+                        {
+                            var item = SearchResultsList.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
+                            if (item != null)
+                            {
+                                totalHeight += item.ActualHeight;
+                            }
+                        }
+
+                        avgHeight = measuredItems > 0 ? totalHeight / measuredItems : 140;
+
+                        double viewportHeight = SearchResultsScrollViewer.ViewportHeight;
+                        double targetOffset = (randomIndex * avgHeight) - (viewportHeight / 2) + (avgHeight / 2);
+
+                        targetOffset = Math.Max(0, Math.Min(targetOffset, SearchResultsScrollViewer.ScrollableHeight));
+
+                        AnimateScroll(SearchResultsScrollViewer.VerticalOffset, targetOffset);
+                    }
+                }, System.Windows.Threading.DispatcherPriority.Loaded);
+            }
+        }
+
+        private void SongTitle_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is TextBlock textBlock)
+            {
+                textBlock.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF2D9CDB"));
+            }
+        }
+
+        private void SongTitle_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is TextBlock textBlock && textBlock.DataContext is SongSearchResult song)
+            {
+                try
+                {
+                    textBlock.Foreground = new SolidColorBrush(Colors.White);
+
+                    Clipboard.SetText(song.Title);
+
+                    if (_tooltipTimers.ContainsKey(textBlock))
+                    {
+                        _tooltipTimers[textBlock].Stop();
+                        _tooltipTimers.Remove(textBlock);
+                    }
+
+                    textBlock.SetValue(ToolTipService.IsEnabledProperty, false);
+                    textBlock.SetValue(ToolTipService.IsEnabledProperty, true);
+                    textBlock.ToolTip = "복사됨!";
+
+                    var tooltipTimer = new DispatcherTimer
+                    {
+                        Interval = TimeSpan.FromSeconds(1.5)
+                    };
+                    tooltipTimer.Tick += (s, args) =>
+                    {
+                        textBlock.ToolTip = "클릭하여 복사";
+                        if (_tooltipTimers.ContainsKey(textBlock))
+                        {
+                            _tooltipTimers.Remove(textBlock);
+                        }
+                        tooltipTimer.Stop();
+                    };
+                    _tooltipTimers[textBlock] = tooltipTimer;
+                    tooltipTimer.Start();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Clipboard error: {ex.Message}");
+                }
+            }
+        }
+
+        private void SongTitle_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is TextBlock textBlock)
+            {
+                textBlock.Foreground = new SolidColorBrush(Colors.White);
+
+                if (_tooltipTimers.ContainsKey(textBlock))
+                {
+                    _tooltipTimers[textBlock].Stop();
+                    _tooltipTimers.Remove(textBlock);
+                    textBlock.ToolTip = "클릭하여 복사";
+                }
+            }
+        }
+
+        private void AnimateScroll(double fromValue, double toValue)
+        {
+            var animation = new DoubleAnimation
+            {
+                From = fromValue,
+                To = toValue,
+                Duration = TimeSpan.FromMilliseconds(500),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut }
+            };
+
+            var storyboard = new Storyboard();
+            storyboard.Children.Add(animation);
+            Storyboard.SetTarget(animation, SearchResultsScrollViewer);
+            Storyboard.SetTargetProperty(animation, new PropertyPath(ScrollViewerBehavior.VerticalOffsetProperty));
+            storyboard.Begin();
+        }
+
+        private static T? FindVisualChild<T>(DependencyObject parent, int index) where T : DependencyObject
+        {
+            if (parent is ItemsControl itemsControl && index < itemsControl.Items.Count)
+            {
+                var item = itemsControl.Items[index];
+                var container = itemsControl.ItemContainerGenerator.ContainerFromItem(item);
+
+                if (container is ContentPresenter presenter)
+                {
+                    return presenter as T;
+                }
+            }
+            return null;
+        }
+
         private void SongInfoBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (!isEditMode) return;
@@ -430,44 +648,68 @@ namespace MuseLab
         private async Task PerformSearchAsync()
         {
             string searchQuery = SearchBox?.Text?.Trim() ?? string.Empty;
-
-            if (string.IsNullOrEmpty(searchQuery))
-            {
-                if (SearchResultsPanel.Visibility == Visibility.Visible)
-                {
-                    SearchPromptText.Visibility = Visibility.Visible;
-                    NoResultsText.Visibility = Visibility.Collapsed;
-                    SearchResultsList.ItemsSource = null;
-                }
-                return;
-            }
+            string levelMin = LevelMinBox?.Text?.Trim() ?? string.Empty;
+            string levelMax = LevelMaxBox?.Text?.Trim() ?? string.Empty;
+            string course = _selectedCourse;
 
             SearchPromptText.Visibility = Visibility.Collapsed;
 
             try
             {
-                string apiUrl = $"http://localhost:3000/songs/{Uri.EscapeDataString(searchQuery)}";
+                string apiUrl;
+                var queryParams = new List<string>();
+
+                if (!string.IsNullOrEmpty(levelMin))
+                    queryParams.Add($"levelMin={Uri.EscapeDataString(levelMin)}");
+                if (!string.IsNullOrEmpty(levelMax))
+                    queryParams.Add($"levelMax={Uri.EscapeDataString(levelMax)}");
+                if (!string.IsNullOrEmpty(course))
+                    queryParams.Add($"course={Uri.EscapeDataString(course)}");
+
+                string queryString = queryParams.Count > 0 ? "?" + string.Join("&", queryParams) : string.Empty;
+
+                if (!string.IsNullOrEmpty(searchQuery))
+                {
+                    apiUrl = $"http://localhost:3000/songs/{Uri.EscapeDataString(searchQuery)}{queryString}";
+                }
+                else if (queryParams.Count > 0)
+                {
+                    apiUrl = $"http://localhost:3000/songs{queryString}";
+                }
+                else
+                {
+                    if (SearchResultsPanel.Visibility == Visibility.Visible)
+                    {
+                        SearchPromptText.Visibility = Visibility.Visible;
+                        NoResultsText.Visibility = Visibility.Collapsed;
+                        SearchResultsList.ItemsSource = null;
+                    }
+                    return;
+                }
+
                 var response = await httpClient.GetAsync(apiUrl);
 
                 if (response.IsSuccessStatusCode)
                 {
                     var json = await response.Content.ReadAsStringAsync();
+                    Debug.WriteLine($"API Response JSON: {json}");
+
                     var apiResponse = System.Text.Json.JsonSerializer.Deserialize<SongApiResponse>(json);
 
                     var results = new ObservableCollection<SongSearchResult>();
 
-                    if (apiResponse?.bestMatch != null && apiResponse.bestMatch.Count > 0)
+                    if (apiResponse?.results != null && apiResponse.results.Count > 0)
                     {
-                        foreach (var match in apiResponse.bestMatch)
+                        foreach (var song in apiResponse.results)
                         {
                             results.Add(new SongSearchResult
                             {
-                                Title = match.title ?? "Unknown",
-                                Course = match.course ?? "Unknown",
-                                Level = match.level,
-                                Composer = match.composer ?? "Unknown",
-                                Notes = match.notes,
-                                Bpm = match.bpm ?? "Unknown"
+                                Title = song.title ?? "Unknown",
+                                Course = song.course ?? "Unknown",
+                                Level = song.level,
+                                Composer = song.composer ?? "Unknown",
+                                Notes = song.notes,
+                                Bpm = song.bpm ?? "Unknown"
                             });
                         }
                     }
@@ -556,5 +798,33 @@ namespace MuseLab
         private const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
 
 
+    }
+
+    public static class ScrollViewerBehavior
+    {
+        public static readonly DependencyProperty VerticalOffsetProperty =
+            DependencyProperty.RegisterAttached(
+                "VerticalOffset",
+                typeof(double),
+                typeof(ScrollViewerBehavior),
+                new PropertyMetadata(0.0, OnVerticalOffsetChanged));
+
+        public static double GetVerticalOffset(DependencyObject obj)
+        {
+            return (double)obj.GetValue(VerticalOffsetProperty);
+        }
+
+        public static void SetVerticalOffset(DependencyObject obj, double value)
+        {
+            obj.SetValue(VerticalOffsetProperty, value);
+        }
+
+        private static void OnVerticalOffsetChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is ScrollViewer scrollViewer)
+            {
+                scrollViewer.ScrollToVerticalOffset((double)e.NewValue);
+            }
+        }
     }
 }
