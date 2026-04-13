@@ -205,7 +205,7 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,8">
                         <Button x:Name="CourseAllButton"
                                Content="모두"
-                               Background="#FF2D9CDB"
+                               Background="{StaticResource AccentBrush}"
                                Foreground="White"
                                BorderThickness="0"
                                Padding="12,6"
@@ -216,7 +216,7 @@
                                Click="CourseButton_Click"/>
                         <Button x:Name="CourseMasterButton"
                                Content="Master"
-                               Background="#FF3A3A3A"
+                               Background="{StaticResource CardBackgroundBrush}"
                                Foreground="White"
                                BorderThickness="0"
                                Padding="12,6"
@@ -228,7 +228,7 @@
                                Click="CourseButton_Click"/>
                         <Button x:Name="CourseHiddenButton"
                                Content="Hidden"
-                               Background="#FF3A3A3A"
+                               Background="{StaticResource CardBackgroundBrush}"
                                Foreground="White"
                                BorderThickness="0"
                                Padding="12,6"

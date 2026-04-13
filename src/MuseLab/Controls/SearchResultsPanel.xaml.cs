@@ -14,6 +14,7 @@ namespace MuseLab.Controls
     public partial class SearchResultsPanel : UserControl
     {
         public event RoutedEventHandler? CloseRequested;
+        public event EventHandler<SongSearchResult>? SongSelected;
 
         private Dictionary<TextBlock, DispatcherTimer> _tooltipTimers = new();
 
@@ -39,6 +40,13 @@ namespace MuseLab.Controls
         private void CloseSearchButton_Click(object sender, RoutedEventArgs e)
         {
             CloseRequested?.Invoke(this, e);
+        }
+
+        private void SongCard_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton != MouseButton.Left) return;
+            if (sender is FrameworkElement fe && fe.DataContext is SongSearchResult song)
+                SongSelected?.Invoke(this, song);
         }
 
         private void RandomPickButton_Click(object sender, RoutedEventArgs e)

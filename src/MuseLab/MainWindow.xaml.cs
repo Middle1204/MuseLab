@@ -225,11 +225,36 @@ namespace MuseLab
         private void SearchResultsControl_CloseRequested(object sender, RoutedEventArgs e) =>
             CloseSearchResultsPanel();
 
+        private void SearchResultsControl_SongSelected(object sender, SongSearchResult song)
+        {
+            SongDetailControl.LoadSong(song);
+
+            if (SongDetailWrapper.Visibility != Visibility.Visible)
+            {
+                SongDetailWrapper.Visibility = Visibility.Visible;
+                ((Storyboard)FindResource("DetailSlideIn")).Begin();
+            }
+        }
+
+        private void SongDetailControl_CloseRequested(object sender, RoutedEventArgs e)
+        {
+            var slideOut = (Storyboard)FindResource("DetailSlideOut");
+            slideOut.Completed += (s, ev) => SongDetailWrapper.Visibility = Visibility.Collapsed;
+            slideOut.Begin();
+        }
+
         private void CloseSearchResultsPanel()
         {
             var slideOut = (Storyboard)FindResource("SearchSlideOut");
             slideOut.Completed += (s, e) => SearchResultsWrapper.Visibility = Visibility.Collapsed;
             slideOut.Begin();
+
+            if (SongDetailWrapper.Visibility == Visibility.Visible)
+            {
+                var detailSlideOut = (Storyboard)FindResource("DetailSlideOut");
+                detailSlideOut.Completed += (s, e) => SongDetailWrapper.Visibility = Visibility.Collapsed;
+                detailSlideOut.Begin();
+            }
         }
 
         // 式式式 匐儀 式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式式

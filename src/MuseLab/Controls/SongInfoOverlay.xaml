@@ -32,7 +32,7 @@
 
                 <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                     <Border x:Name="DifficultyBorder"
-                            Background="#FF2D9CDB"
+                            Background="{StaticResource CourseDefaultBrush}"
                             CornerRadius="6"
                             Padding="6,2"
                             Margin="0,0,6,0">

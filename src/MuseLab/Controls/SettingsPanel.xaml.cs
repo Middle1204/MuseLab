@@ -47,31 +47,56 @@ namespace MuseLab.Controls
 
         private void FilterToggleButton_Click(object sender, RoutedEventArgs e)
         {
+            if (_isFilterOpen) CloseFilter();
+            else OpenFilter();
+        }
+
+        private void OpenFilter()
+        {
             if (_filterContentHeight == 0)
                 MeasureFilterContent();
+            if (_isFilterOpen) return;
 
-            _isFilterOpen = !_isFilterOpen;
+            _isFilterOpen = true;
+            FilterToggleArrow.Text = "▼";
 
-            FilterToggleArrow.Text = _isFilterOpen ? "▼" : "▲";
-
-            var heightAnim = new DoubleAnimation
+            FilterPanel.BeginAnimation(HeightProperty, new DoubleAnimation
             {
-                From = _isFilterOpen ? 0 : _filterContentHeight,
-                To = _isFilterOpen ? _filterContentHeight : 0,
+                From = 0,
+                To = _filterContentHeight,
                 Duration = TimeSpan.FromMilliseconds(200),
-                EasingFunction = new CubicEase { EasingMode = _isFilterOpen ? EasingMode.EaseOut : EasingMode.EaseIn }
-            };
-
-            var translateAnim = new DoubleAnimation
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            });
+            FilterTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation
             {
-                From = _isFilterOpen ? _filterContentHeight : 0,
-                To = _isFilterOpen ? 0 : _filterContentHeight,
+                From = _filterContentHeight,
+                To = 0,
                 Duration = TimeSpan.FromMilliseconds(200),
-                EasingFunction = new CubicEase { EasingMode = _isFilterOpen ? EasingMode.EaseOut : EasingMode.EaseIn }
-            };
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            });
+        }
 
-            FilterPanel.BeginAnimation(HeightProperty, heightAnim);
-            FilterTranslate.BeginAnimation(TranslateTransform.YProperty, translateAnim);
+        private void CloseFilter()
+        {
+            if (!_isFilterOpen) return;
+
+            _isFilterOpen = false;
+            FilterToggleArrow.Text = "▲";
+
+            FilterPanel.BeginAnimation(HeightProperty, new DoubleAnimation
+            {
+                From = _filterContentHeight,
+                To = 0,
+                Duration = TimeSpan.FromMilliseconds(200),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            });
+            FilterTranslate.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation
+            {
+                From = 0,
+                To = _filterContentHeight,
+                Duration = TimeSpan.FromMilliseconds(200),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+            });
         }
 
         public void SetEditModeActive(bool active)
@@ -99,8 +124,11 @@ namespace MuseLab.Controls
         private void SearchButton_Click(object sender, RoutedEventArgs e) =>
             SearchRequested?.Invoke(this, e);
 
-        private void SearchBox_GotFocus(object sender, RoutedEventArgs e) =>
+        private void SearchBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            OpenFilter();
             SearchFocused?.Invoke(this, SearchBox.Text);
+        }
 
         private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) =>
             SearchTextChanged?.Invoke(this, SearchBox.Text);
@@ -150,14 +178,17 @@ namespace MuseLab.Controls
         {
             if (sender is Button clickedButton)
             {
-                CourseAllButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3A3A3A"));
-                CourseMasterButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3A3A3A"));
-                CourseHiddenButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF3A3A3A"));
-                clickedButton.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF2D9CDB"));
+                var inactive = (SolidColorBrush)Application.Current.Resources["CardBackgroundBrush"];
+                var active   = (SolidColorBrush)Application.Current.Resources["AccentBrush"];
 
-                if (clickedButton == CourseAllButton) _selectedCourse = "";
-                else if (clickedButton == CourseMasterButton) _selectedCourse = "master";
-                else if (clickedButton == CourseHiddenButton) _selectedCourse = "hidden";
+                CourseAllButton.Background    = inactive;
+                CourseMasterButton.Background = inactive;
+                CourseHiddenButton.Background = inactive;
+                clickedButton.Background      = active;
+
+                if (clickedButton == CourseAllButton)          _selectedCourse = "";
+                else if (clickedButton == CourseMasterButton)  _selectedCourse = "master";
+                else if (clickedButton == CourseHiddenButton)  _selectedCourse = "hidden";
 
                 CourseFilterChanged?.Invoke(this, _selectedCourse);
             }

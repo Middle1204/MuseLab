@@ -69,6 +69,34 @@
                            Storyboard.TargetProperty="Opacity"
                            From="1" To="0" Duration="0:0:0.25"/>
         </Storyboard>
+
+            <!-- Song detail panel slide-in animation -->
+        <Storyboard x:Key="DetailSlideIn">
+            <DoubleAnimation Storyboard.TargetName="SongDetailTransform"
+                           Storyboard.TargetProperty="X"
+                           From="-370" To="0" Duration="0:0:0.3">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="SongDetailWrapper"
+                           Storyboard.TargetProperty="Opacity"
+                           From="0" To="1" Duration="0:0:0.3"/>
+        </Storyboard>
+
+            <!-- Song detail panel slide-out animation -->
+        <Storyboard x:Key="DetailSlideOut">
+            <DoubleAnimation Storyboard.TargetName="SongDetailTransform"
+                           Storyboard.TargetProperty="X"
+                           From="0" To="-370" Duration="0:0:0.25">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseIn"/>
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="SongDetailWrapper"
+                           Storyboard.TargetProperty="Opacity"
+                           From="1" To="0" Duration="0:0:0.25"/>
+        </Storyboard>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -93,7 +121,8 @@
                 <TranslateTransform x:Name="SearchResultsTransform" X="-370"/>
             </Border.RenderTransform>
             <controls:SearchResultsPanel x:Name="SearchResultsControl"
-                                         CloseRequested="SearchResultsControl_CloseRequested"/>
+                                         CloseRequested="SearchResultsControl_CloseRequested"
+                                         SongSelected="SearchResultsControl_SongSelected"/>
         </Border>
 
         <!-- Settings panel -->
@@ -128,5 +157,24 @@
                                   HorizontalAlignment="Right"
                                   VerticalAlignment="Bottom"
                                   Margin="0,0,20,20"/>
+
+        <!-- Song detail panel -->
+        <Border x:Name="SongDetailWrapper"
+                Width="350"
+                Background="#EE2A2A2A"
+                CornerRadius="12"
+                Margin="730,20,10,20"
+                Padding="12"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Stretch"
+                Visibility="Collapsed"
+                Opacity="0"
+                RenderTransformOrigin="0,0">
+            <Border.RenderTransform>
+                <TranslateTransform x:Name="SongDetailTransform" X="-370"/>
+            </Border.RenderTransform>
+            <controls:SongDetailPanel x:Name="SongDetailControl"
+                                      CloseRequested="SongDetailControl_CloseRequested"/>
+        </Border>
     </Grid>
 </Window>

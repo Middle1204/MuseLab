@@ -1,7 +1,80 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- 스크롤바 스타일 -->
+    <!-- ══════════════════════════════════════
+         색상 리소스
+    ══════════════════════════════════════ -->
+
+    <!-- 난이도 배지 색상 -->
+    <SolidColorBrush x:Key="CourseMasterBrush"  Color="#FF9B59B6"/>  
+    <SolidColorBrush x:Key="CourseHiddenBrush"  Color="#FF1A1A1A"/>  
+    <SolidColorBrush x:Key="CourseDefaultBrush" Color="#FF2D9CDB"/>  
+
+    <!-- 레벨 배지 색상 -->
+    <SolidColorBrush x:Key="LevelBadgeBrush" Color="#FFFF6B6B"/>
+
+    <!-- 카드 / 입력 배경 -->
+    <SolidColorBrush x:Key="CardBackgroundBrush"    Color="#FF3A3A3A"/>
+    <SolidColorBrush x:Key="InputBackgroundBrush"   Color="#FF3A3A3A"/>
+    <SolidColorBrush x:Key="InputBorderBrush"       Color="#FF555555"/>
+    <SolidColorBrush x:Key="PanelBackgroundBrush"   Color="#FF2A2A2A"/>
+
+    <!-- 텍스트 계열 -->
+    <SolidColorBrush x:Key="SubTextBrush"   Color="#FFBBBBBB"/>
+    <SolidColorBrush x:Key="MutedTextBrush" Color="#FF888888"/>
+    <SolidColorBrush x:Key="DimTextBrush"   Color="#FFCCCCCC"/>
+
+    <!-- 강조색 -->
+    <SolidColorBrush x:Key="AccentBrush"    Color="#FF2D9CDB"/>
+
+    <!-- ══════════════════════════════════════
+         난이도 배지 스타일 (Course 바인딩 기반 자동 색상)
+    ══════════════════════════════════════ -->
+    <Style x:Key="CourseBadgeStyle" TargetType="Border">
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding"      Value="6,3"/>
+        <Setter Property="Background"   Value="{StaticResource CourseDefaultBrush}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding Course}" Value="master">
+                <Setter Property="Background" Value="{StaticResource CourseMasterBrush}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding Course}" Value="hidden">
+                <Setter Property="Background" Value="{StaticResource CourseHiddenBrush}"/>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ══════════════════════════════════════
+         레벨 배지
+    ══════════════════════════════════════ -->
+    <Style x:Key="LevelBadgeStyle" TargetType="Border">
+        <Setter Property="Background"   Value="{StaticResource LevelBadgeBrush}"/>
+        <Setter Property="CornerRadius" Value="4"/>
+        <Setter Property="Padding"      Value="6,3"/>
+    </Style>
+
+    <!-- ══════════════════════════════════════
+         카드 스타일
+    ══════════════════════════════════════ -->
+    <!-- 검색 결과 카드 (CornerRadius=8, Margin bottom=8) -->
+    <Style x:Key="SearchCardStyle" TargetType="Border">
+        <Setter Property="Background"   Value="{StaticResource CardBackgroundBrush}"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding"      Value="12"/>
+        <Setter Property="Margin"       Value="0,0,0,8"/>
+    </Style>
+
+    <!-- 상세 정보 카드 (CornerRadius=10, Margin bottom=10) -->
+    <Style x:Key="DetailCardStyle" TargetType="Border">
+        <Setter Property="Background"   Value="{StaticResource CardBackgroundBrush}"/>
+        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="Padding"      Value="14"/>
+        <Setter Property="Margin"       Value="0,0,0,10"/>
+    </Style>
+
+    <!-- ══════════════════════════════════════
+         스크롤바
+    ══════════════════════════════════════ -->
     <Style x:Key="CustomScrollBarStyle" TargetType="ScrollBar">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Width" Value="8"/>
@@ -30,7 +103,7 @@
                                                     <Setter Property="Background" Value="#FF888888"/>
                                                 </Trigger>
                                                 <Trigger Property="IsDragging" Value="True">
-                                                    <Setter Property="Background" Value="#FF2D9CDB"/>
+                                                    <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
                                                 </Trigger>
                                             </Style.Triggers>
                                         </Style>

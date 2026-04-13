@@ -70,10 +70,29 @@
                 <ItemsControl x:Name="SearchResultsList">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Background="#FF3A3A3A"
-                                   CornerRadius="8"
-                                   Padding="12"
-                                   Margin="0,0,0,8">
+                            <Border Cursor="Hand"
+                                    MouseLeftButtonUp="SongCard_MouseUp">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource SearchCardStyle}">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#FF454545"/>
+                                            </Trigger>
+                                            <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <ColorAnimation Storyboard.TargetProperty="Background.Color"
+                                                                           From="#FFFF6B6B"
+                                                                           To="#FF3A3A3A"
+                                                                           Duration="0:0:1.5"/>
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <StackPanel>
                                     <!-- 곡 제목 -->
                                     <TextBlock Text="{Binding Title}"
@@ -92,7 +111,7 @@
 
                                     <!-- 작곡가 -->
                                     <TextBlock FontSize="12"
-                                              Foreground="#FFBBBBBB"
+                                              Foreground="{StaticResource SubTextBrush}"
                                               Margin="0,0,0,8">
                                         <Run Text="Composer: "/>
                                         <Run Text="{Binding Composer}" FontWeight="Medium"/>
@@ -100,9 +119,7 @@
 
                                     <!-- 난이도 & 레벨 -->
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Border Background="#FF2D9CDB"
-                                               CornerRadius="4"
-                                               Padding="6,3"
+                                        <Border Style="{StaticResource CourseBadgeStyle}"
                                                Margin="0,0,6,0">
                                             <TextBlock Text="{Binding Course}"
                                                       FontSize="11"
@@ -110,9 +127,7 @@
                                                       FontWeight="SemiBold"/>
                                         </Border>
 
-                                        <Border Background="#FFFF6B6B"
-                                               CornerRadius="4"
-                                               Padding="6,3">
+                                        <Border Style="{StaticResource LevelBadgeStyle}">
                                             <TextBlock FontSize="11"
                                                       Foreground="White"
                                                       FontWeight="SemiBold">
@@ -130,34 +145,16 @@
                                         </Grid.ColumnDefinitions>
 
                                         <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                            <TextBlock Text="Notes: " FontSize="11" Foreground="#FF888888"/>
-                                            <TextBlock Text="{Binding Notes}" FontSize="11" Foreground="#FFCCCCCC" FontWeight="Medium"/>
+                                            <TextBlock Text="Notes: " FontSize="11" Foreground="{StaticResource MutedTextBrush}"/>
+                                            <TextBlock Text="{Binding Notes}" FontSize="11" Foreground="{StaticResource DimTextBrush}" FontWeight="Medium"/>
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                            <TextBlock Text="BPM: " FontSize="11" Foreground="#FF888888"/>
-                                            <TextBlock Text="{Binding Bpm}" FontSize="11" Foreground="#FFCCCCCC" FontWeight="Medium"/>
+                                            <TextBlock Text="BPM: " FontSize="11" Foreground="{StaticResource MutedTextBrush}"/>
+                                            <TextBlock Text="{Binding Bpm}" FontSize="11" Foreground="{StaticResource DimTextBrush}" FontWeight="Medium"/>
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
-                                                <DataTrigger.EnterActions>
-                                                    <BeginStoryboard>
-                                                        <Storyboard>
-                                                            <ColorAnimation Storyboard.TargetProperty="Background.Color"
-                                                                           From="#FFFF6B6B"
-                                                                           To="#FF3A3A3A"
-                                                                           Duration="0:0:1.5"/>
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </DataTrigger.EnterActions>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
